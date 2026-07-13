@@ -56,6 +56,30 @@ background. Nothing leaves your machine.
 
 ## Install
 
+### Homebrew (recommended)
+
+```sh
+brew tap AKharytonchyk/claude-watcher
+brew install --cask claude-watcher
+```
+
+If Homebrew asks you to trust the tap first (a one-time prompt for third-party
+casks):
+
+```sh
+brew trust --cask AKharytonchyk/claude-watcher/claude-watcher
+```
+
+Or grab `ClaudeWatcher-<version>.dmg` from
+[Releases](https://github.com/AKharytonchyk/claude-watcher/releases/latest) and
+drag **ClaudeWatcher.app** to Applications.
+
+> The build isn't notarized yet, so macOS may warn on first launch. The cask
+> clears the quarantine flag for you; for the DMG, right-click → Open once, or:
+> `xattr -dr com.apple.quarantine /Applications/ClaudeWatcher.app`
+
+### Build from source
+
 Requires the Xcode **Command Line Tools** (`xcode-select --install`). No full
 Xcode needed — the UI is SwiftUI but it compiles with `swiftc` alone.
 
