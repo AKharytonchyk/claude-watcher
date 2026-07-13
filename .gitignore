@@ -1,0 +1,15 @@
+# Build products
+/ClaudeWatcher.app/
+/ClaudeWatcher
+.build/
+*.o
+*.swiftmodule
+DerivedData/
+
+# macOS
+.DS_Store
+
+# Editor / misc
+*.swp
+.idea/
+.vscode/
