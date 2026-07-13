@@ -101,11 +101,20 @@ Start at login: System Settings → General → Login Items → **+** → `Claud
 | Env var | Default | Purpose |
 |---------|---------|---------|
 | `CWATCH_CONTEXT_WINDOW` | inferred | Force the assumed context window for the `ctx %` gauge, e.g. `1m` or `1000000`. By default it assumes 200K and upgrades to 1M once a session's usage exceeds 200K. Set this if you always run a 1M-context model. |
+| `CWATCH_OFFLINE` | unset | Set to anything to disable the `gh` PR lookup — the app's only outbound network path. Guarantees zero network. |
+
+> Set env vars for a GUI app with `launchctl setenv NAME value`, then relaunch.
 
 ## Posture
 
-Local-first · no telemetry · no network except your own `gh` for PR status ·
-transcripts read-only · single `.app`, no daemon · MIT.
+Local-first · no telemetry · no analytics · writes nothing to disk · transcripts
+read-only · single `.app`, no daemon · MIT.
+
+The app makes **no network requests of its own**. The only outbound traffic is
+the optional `gh` PR lookup, which uses *your* GitHub credentials and sends only
+the repo + branch — never your prompts, transcripts, or paths. Set
+`CWATCH_OFFLINE` for a guaranteed zero-network run. Full details in
+[PRIVACY.md](PRIVACY.md).
 
 ## Why Claude Watcher
 

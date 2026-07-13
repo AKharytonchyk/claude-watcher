@@ -21,9 +21,14 @@ final class PRChecker {
     private let ttl: TimeInterval = 90
     private static let ghCandidates = ["/opt/homebrew/bin/gh", "/usr/local/bin/gh", "/usr/bin/gh"]
 
+    /// The PR lookup (via `gh`) is the app's only outbound network path.
+    /// Set CWATCH_OFFLINE to disable it entirely for a guaranteed zero-network run.
+    private static let offline = ProcessInfo.processInfo.environment["CWATCH_OFFLINE"] != nil
+
     /// What we currently know for a dir+branch.
     /// `fetched == false` means "not looked up yet" (show nothing/placeholder).
     func status(dir: String, branch: String?) -> (fetched: Bool, pr: PRInfo?) {
+        if Self.offline { return (true, nil) }
         guard let branch else { return (true, nil) }
         lock.lock(); defer { lock.unlock() }
         if let entry = cache[dir], entry.branch == branch,
@@ -35,7 +40,7 @@ final class PRChecker {
 
     /// Refresh any stale/missing entries for the given sessions in the background.
     func refresh(_ sessions: [Session]) {
-        guard let gh = Self.gh else { return }
+        guard !Self.offline, let gh = Self.gh else { return }
         var seenDirs = Set<String>()
         for session in sessions {
             guard let branch = session.gitBranch else { continue }
