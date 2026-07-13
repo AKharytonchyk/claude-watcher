@@ -10,9 +10,9 @@
 
 🔴 needs you · 🟡 working · 🟢 idle — one glance at the menu bar, no window in your way.
 
-</div>
+<img src="assets/explainer.png" alt="Claude Watcher menu-bar popover" width="820">
 
-> _Add a screenshot/GIF here — `assets/popover.png`. (Menu-bar app screenshots are the single biggest driver of stars.)_
+</div>
 
 ## The problem
 
