@@ -17,7 +17,7 @@ cask "claude-watcher" do
   desc "Menu-bar app that shows which Claude Code agent needs you"
   homepage "https://github.com/AKharytonchyk/claude-watcher"
 
-  depends_on macos: ">= :ventura" # macOS 13+
+  depends_on macos: :ventura # macOS 13 (Ventura) or later
 
   app "ClaudeWatcher.app"
 
