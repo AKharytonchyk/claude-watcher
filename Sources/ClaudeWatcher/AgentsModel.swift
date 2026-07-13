@@ -15,6 +15,9 @@ struct AgentVM: Identifiable {
     let cwd: String
     let shortCwd: String
     let pid: Int
+    let contextTokens: Int?  // most recent turn's context size
+    let contextWindow: Int?  // inferred window
+    let contextPct: Double?  // contextTokens / window (0...1)
 }
 
 /// Observable snapshot of the running agents, refreshed on a timer.
@@ -51,6 +54,11 @@ final class AgentsModel: ObservableObject {
             case .idle:    stateText = "idle"
             }
 
+            let ctxTokens = detail.contextTokens
+            let window = ctxTokens.map { contextWindow(observedTokens: $0) }
+            let ctxPct: Double? = (ctxTokens != nil && window != nil)
+                ? Double(ctxTokens!) / Double(window!) : nil
+
             return AgentVM(
                 id: session.sessionId,
                 name: session.displayName,
@@ -63,7 +71,10 @@ final class AgentsModel: ObservableObject {
                 prPending: branch != nil && !fetched,
                 cwd: session.cwd,
                 shortCwd: session.shortCwd,
-                pid: session.pid
+                pid: session.pid,
+                contextTokens: ctxTokens,
+                contextWindow: window,
+                contextPct: ctxPct
             )
         }
     }

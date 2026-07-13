@@ -8,7 +8,7 @@ APP="ClaudeWatcher.app"
 BIN_NAME="ClaudeWatcher"
 
 echo "▸ compiling"
-swiftc -O -framework AppKit -framework SwiftUI Sources/ClaudeWatcher/*.swift -o "$BIN_NAME"
+swiftc -O -framework AppKit -framework SwiftUI -framework CoreServices Sources/ClaudeWatcher/*.swift -o "$BIN_NAME"
 
 echo "▸ assembling $APP"
 rm -rf "$APP"

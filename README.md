@@ -1,134 +1,118 @@
+<div align="center">
+
 # Claude Watcher
 
-A macOS menu bar app that shows how many Claude Code agents are running,
-broken down by state as a compact set of colored dots + counts — e.g.
-`🟡1 🟢2` means one working and two idle.
+**A tiny macOS menu-bar app that tells you which Claude Code agent needs you.**
 
-- 🔴 **needs you** — blocked on you (`status: waiting`, e.g. a permission
-  prompt or a question); the row shows *what* it's waiting for
-- 🟡 **working** — actively busy
-- 🟢 **idle** — done / waiting quietly
+[![macOS](https://img.shields.io/badge/macOS-13%2B-000000?logo=apple&logoColor=white)](https://www.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-5.9%2B-F05138?logo=swift&logoColor=white)](https://swift.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-34C759.svg)](LICENSE)
 
-Only states that actually have agents are shown, most-urgent first, so a
-single color never implies "all agents are the same".
+🔴 needs you · 🟡 working · 🟢 idle — one glance at the menu bar, no window in your way.
 
-Clicking the icon opens a **SwiftUI popover** — a native, system-material panel
-with a GitHub-flavored layout that adapts to light/dark automatically. One row
-per agent, sorted by urgency (needs-you → working → idle, longest-in-state
-first):
+</div>
 
-```
- Claude Agents                    [🔴1] 🟡1  🟢2   ← click a chip to filter
- ───────────────────────────────────────────────
- 🔴  payments-api-7   needs you — awaiting your response · 3m
-     add retry + backoff to the upload queue…
-     ⎇ feat/onboarding      ⇅ #142
- ───────────────────────────────────────────────
- 4 agents                                     Quit
-```
+> _Add a screenshot/GIF here — `assets/popover.png`. (Menu-bar app screenshots are the single biggest driver of stars.)_
 
-The header state chips double as a **single-select filter**: click one to show
-only that state, click it again to clear (only one active at a time).
+## The problem
 
-- **Line 1** = name + state + time-in-state (red when it needs you).
-- **Line 2** = your last intent (the last thing you asked it to do).
-- **Line 3** = the git branch chip, plus a GitHub-style **PR pill** (solid
-  green for open, gray for draft) when the branch has an open PR. Not a git
-  repo? Line 3 shows the folder.
+Running several Claude Code sessions at once, you lose track of **which one is
+waiting on you**. Claude's own desktop notifications don't fire inside tmux, and
+flipping between terminal tabs to check "is it done? is it stuck? did it ask me
+something?" shreds your focus. You want an ambient signal — not another window
+that steals focus.
 
-**Clicking a row jumps to that agent's iTerm window/tab** (matched by the
-process's controlling tty). **Clicking the PR pill opens the PR** in your
-browser.
+Claude Watcher reads the status files Claude Code already writes and turns them
+into one calm menu-bar indicator plus a click-to-jump panel.
 
-PR status is looked up with `gh` in the background (cached ~90s) so the panel
-never blocks; it works with github.com and GitHub Enterprise. No `gh` / no
-open PR → no pill.
+## What it does
 
-If the session isn't found in iTerm (e.g. it's in another terminal, or you
-haven't granted automation access yet), clicking falls back to revealing the
-project folder in Finder.
-
-> **First click on a row** triggers a macOS prompt: *"ClaudeWatcher wants to
-> control iTerm2."* Approve it (System Settings → Privacy & Security →
-> Automation) for the jump-to-tab feature to work.
-
-The panel updates live while open (every few seconds); transcript detail is
-read with an mtime cache so refreshes stay cheap.
+- **Per-state count in the menu bar** — `🔴1 🟡1 🟢2`, only the states that exist.
+- **Real "needs you" detection** — uses Claude Code's `waiting` status, so an
+  agent blocked on a prompt/permission is unmistakable (not lumped into "idle").
+- **Ambient pulse** — the icon gives a gentle breathing pulse the moment a new
+  agent starts needing you. No banners, no sound, no focus stealing.
+- **A native SwiftUI popover** (GitHub-flavored, adapts to light/dark):
+  - Each agent shows its **last intent**, **git branch**, and an **open-PR pill**.
+  - **Click a row → jump straight to that agent's iTerm tab.**
+  - **Click the PR pill → open the PR** in your browser.
+  - **Context-pressure gauge** (`ctx 82%`) warns before the auto-compact cliff.
+  - Header chips double as a **single-select filter**.
+- **Real-time** via FSEvents — sub-second updates, ~0 idle CPU, no polling loop.
 
 ## How it works
 
-Every running Claude Code process writes a live status file to
-`~/.claude/sessions/<pid>.json` containing `name`, `cwd`, `status`
-(`busy`/`idle`/`waiting`), version, and timestamps. Claude Watcher polls that
-folder every few seconds, drops entries whose process is no longer alive
-(`kill(pid, 0)`), and rolls the rest up into the icon + popover. Per-agent
-"last intent" comes from the session transcript; PR status from `gh`.
-
-## Build & run
-
-Requires the Xcode Command Line Tools (`xcode-select --install`). **No full
-Xcode needed** — the UI is SwiftUI, but it compiles and links with `swiftc`
-alone (`-framework SwiftUI`).
-
-```sh
-./build-app.sh        # compiles + produces ClaudeWatcher.app
-open ClaudeWatcher.app # launches it into the menu bar
+```
+~/.claude/sessions/*.json  ──FSEvents──▶  state  ──▶  menu bar + popover
+~/.claude/projects/*.jsonl ──(on open)──▶  last intent · context · model
+gh (background, cached)    ──────────────▶  open-PR status
 ```
 
-To see logs / debug, run the binary in the foreground instead:
+Each running Claude Code process writes `~/.claude/sessions/<pid>.json`
+(`name`, `cwd`, `status` = `busy`/`idle`/`waiting`, timestamps). Claude Watcher
+watches that folder, drops dead PIDs (`kill(pid, 0)`), reads "last intent" and
+token usage from the session transcript, and asks `gh` for PR status in the
+background. Nothing leaves your machine.
+
+## Install
+
+Requires the Xcode **Command Line Tools** (`xcode-select --install`). No full
+Xcode needed — the UI is SwiftUI but it compiles with `swiftc` alone.
 
 ```sh
-./ClaudeWatcher.app/Contents/MacOS/ClaudeWatcher
+git clone https://github.com/AKharytonchyk/claude-watcher.git
+cd claude-watcher
+./build-app.sh        # → ClaudeWatcher.app
+open ClaudeWatcher.app
 ```
 
-Quit from the **Quit** button in the popover footer.
+Start at login: System Settings → General → Login Items → **+** → `ClaudeWatcher.app`.
 
-## Start at login (optional)
+> **First time you click a row**, macOS asks to let Claude Watcher control
+> iTerm2 (for the jump-to-tab). Approve it in System Settings → Privacy &
+> Security → Automation. Optional; without it, clicks reveal the folder instead.
 
-1. System Settings → General → Login Items → **+** → pick `ClaudeWatcher.app`.
+## Configuration
 
-Or via `launchd` — see roadmap.
+| Env var | Default | Purpose |
+|---------|---------|---------|
+| `CWATCH_CONTEXT_WINDOW` | inferred | Force the assumed context window for the `ctx %` gauge, e.g. `1m` or `1000000`. By default it assumes 200K and upgrades to 1M once a session's usage exceeds 200K. Set this if you always run a 1M-context model. |
 
-## Layout
+## Posture
 
-| File | Purpose |
-|------|---------|
-| `Sources/ClaudeWatcher/Session.swift`      | Session model + reader (`~/.claude/sessions`) |
-| `Sources/ClaudeWatcher/Status.swift`       | State enum, counts, menu-bar dot rendering |
-| `Sources/ClaudeWatcher/Transcript.swift`   | Last intent / said, from the session transcript |
-| `Sources/ClaudeWatcher/PRChecker.swift`    | Background open-PR lookup via `gh` (cached) |
-| `Sources/ClaudeWatcher/TerminalFocus.swift`| PID → tty → focus the iTerm window/tab |
-| `Sources/ClaudeWatcher/AgentsModel.swift`  | `ObservableObject` snapshot feeding SwiftUI |
-| `Sources/ClaudeWatcher/PopoverView.swift`  | SwiftUI popover (GitHub-flavored, theme-adaptive) |
-| `Sources/ClaudeWatcher/AppDelegate.swift`  | Status item, refresh timer, popover host |
-| `Sources/ClaudeWatcher/main.swift`         | Entry point |
-| `Info.plist`                               | `LSUIElement` (menu-bar-only, no Dock icon) |
-| `build-app.sh`                             | Compile + bundle |
+Local-first · no telemetry · no network except your own `gh` for PR status ·
+transcripts read-only · single `.app`, no daemon · MIT.
+
+## Why Claude Watcher
+
+It's deliberately **small and Claude-only**. If you want a full multi-agent
+observability suite (Codex/Gemini/Aider, cost history, DORA metrics, a web
+dashboard), [**Irrlicht**](https://github.com/ingo-eichhorst/Irrlicht) is
+excellent and far more featureful. Claude Watcher trades all that for:
+
+- **One file, no daemon** — a single SwiftUI binary you build in seconds.
+- **Jump to the agent** — click a row and you're in its iTerm tab. (Most
+  monitors show you state but can't take you there.)
+- **PR-aware** — see and open the open PR for each session's branch.
 
 ## Roadmap
 
-**Phase 1 (done) — MVP**
-- [x] Per-state compact breakdown in the menu bar (🔴/🟡/🟢 + counts)
-- [x] Real `waiting` state — surfaces agents blocked on you + the reason
-- [x] Rich rows: state + time · last intent · branch + open-PR badge
-- [x] Click a row → jump to that agent's iTerm window/tab (tty match)
-- [x] Click the PR pill → open the PR in the browser
-- [x] SwiftUI popover UI — native materials, GitHub vibe, light/dark adaptive
-- [x] Background PR lookup via `gh` (cached); lazy mtime-cached transcript reads
-- [x] Stale-process cleanup
+- [x] Per-state menu-bar breakdown + real `waiting` detection
+- [x] Native SwiftUI popover — last intent, branch, open-PR pill, filter chips
+- [x] Click a row → iTerm tab · click the PR pill → browser
+- [x] Ambient "needs you" pulse (no focus steal)
+- [x] Real-time via FSEvents
+- [x] Context-pressure gauge
+- [ ] Distribution: signed DMG + Homebrew cask
+- [ ] Git-aware grouping (cluster rows by project)
+- [ ] Optional per-session cost in USD
 
-**Phase 2 — next**
-- [x] Ambient icon pulse when a new agent enters `waiting` (no focus steal,
-      edge-triggered, no permission). Banner/sound intentionally not added.
-- [ ] "Just finished" detection: flag busy→idle transitions since you looked
-- [ ] Row actions: focus the agent's terminal/IDE window, copy path/session id
-- [ ] Preferences: refresh interval, which states to notify on
-- [ ] Watch the folder with FSEvents instead of polling
-- [ ] Launch-at-login toggle (`SMAppService`)
+## Contributing & Security
 
-## Known limitations
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). For anything
+security-related, see [SECURITY.md](SECURITY.md). Changes are logged in
+[CHANGELOG.md](CHANGELOG.md).
 
-- Session files are keyed by PID; a crashed process's file lingers until
-  a PID is reused, but the liveness check filters those out.
-- Git branch is read from `.git/HEAD`; git worktrees (where `.git` is a file)
-  show no branch.
+## License
+
+[MIT](LICENSE) © Artsiom Kharytonchyk

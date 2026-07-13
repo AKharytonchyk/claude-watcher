@@ -138,6 +138,31 @@ func menuBarTitle(_ counts: StatusCounts) -> NSAttributedString {
     return result
 }
 
+// MARK: - Context window
+
+/// Best-effort context window for a session. Claude Code doesn't record the
+/// window, so we infer: 200K by default, 1M once usage exceeds 200K (which is
+/// only possible on a 1M-context session). Override with CWATCH_CONTEXT_WINDOW
+/// (e.g. "1m" or "1000000") if you always run a larger window.
+func contextWindow(observedTokens: Int) -> Int {
+    if let raw = ProcessInfo.processInfo.environment["CWATCH_CONTEXT_WINDOW"]?
+        .trimmingCharacters(in: .whitespaces).lowercased(), !raw.isEmpty {
+        if raw.hasSuffix("m"), let n = Double(raw.dropLast()) { return Int(n * 1_000_000) }
+        if let n = Int(raw) { return n }
+    }
+    return observedTokens > 200_000 ? 1_000_000 : 200_000
+}
+
+/// Compact token count: 142000 -> "142K", 1000000 -> "1M".
+func formatTokens(_ n: Int) -> String {
+    if n >= 1_000_000 {
+        let m = Double(n) / 1_000_000
+        return m == m.rounded() ? "\(Int(m))M" : String(format: "%.1fM", m)
+    }
+    if n >= 1_000 { return "\(Int((Double(n) / 1_000).rounded()))K" }
+    return "\(n)"
+}
+
 /// Human-readable one-liner, e.g. "1 needs you · 2 working · 3 idle".
 func summaryText(_ counts: StatusCounts) -> String {
     guard counts.total > 0 else { return "No running agents" }

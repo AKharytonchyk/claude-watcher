@@ -6,7 +6,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let model = AgentsModel()
     private let popover = NSPopover()
     private var timer: Timer?
-    private let refreshInterval: TimeInterval = 3.0
+    private var watcher: FileWatcher?
+    // FSEvents handles instant state changes; the timer only keeps the
+    // "time in state" labels fresh, so it can be slow.
+    private let refreshInterval: TimeInterval = 15.0
 
     // Edge-triggered "needs you" pulse.
     private var knownWaiting: Set<String> = []
@@ -42,6 +45,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         timer = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
             self?.tick()
         }
+
+        // Instant updates the moment a session file changes.
+        watcher = FileWatcher(paths: [SessionStore.sessionsDir.path]) { [weak self] in
+            self?.tick()
+        }
+        watcher?.start()
     }
 
     /// Refresh the model, repaint the menu bar icon, and pulse if a new agent

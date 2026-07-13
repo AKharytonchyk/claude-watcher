@@ -200,7 +200,40 @@ struct AgentRowView: View {
                     .foregroundStyle(.quaternary)
             }
             Spacer(minLength: 0)
+            // Only surface context pressure once it's worth noticing.
+            if let pct = agent.contextPct, pct >= 0.6 {
+                ContextPill(pct: pct, tokens: agent.contextTokens, window: agent.contextWindow)
+            }
         }
+    }
+}
+
+/// Context-pressure pill: yellow → orange → red as the session nears the
+/// auto-compact cliff. Hidden below 60% (nothing to worry about yet).
+struct ContextPill: View {
+    let pct: Double
+    let tokens: Int?
+    let window: Int?
+
+    private var tint: Color {
+        if pct >= 0.9 { return .red }
+        if pct >= 0.8 { return .orange }
+        return .yellow
+    }
+
+    var body: some View {
+        Text("ctx \(Int((pct * 100).rounded()))%")
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1.5)
+            .background(tint.opacity(0.15), in: Capsule())
+            .help(helpText)
+    }
+
+    private var helpText: String {
+        guard let tokens, let window else { return "context usage" }
+        return "\(formatTokens(tokens)) / \(formatTokens(window)) tokens — /compact before it auto-compacts"
     }
 }
 

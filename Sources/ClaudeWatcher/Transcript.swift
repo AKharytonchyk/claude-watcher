@@ -2,9 +2,11 @@ import Foundation
 
 /// Details mined from a session's transcript (~/.claude/projects/<enc>/<id>.jsonl).
 struct SessionDetail {
-    var title: String?        // ai-generated session title
-    var lastPrompt: String?   // user's most recent prompt
-    var lastSaid: String?     // most recent assistant text
+    var title: String?         // ai-generated session title
+    var lastPrompt: String?    // user's most recent prompt
+    var lastSaid: String?      // most recent assistant text
+    var contextTokens: Int?    // most recent turn's context size (input + cache)
+    var model: String?         // model of that turn
 }
 
 /// Reads transcript detail on demand, cached by file modification time so
@@ -42,7 +44,8 @@ final class TranscriptReader {
         }
         var detail = SessionDetail()
         for line in content.split(separator: "\n", omittingEmptySubsequences: true).reversed() {
-            if detail.title != nil, detail.lastPrompt != nil, detail.lastSaid != nil { break }
+            if detail.title != nil, detail.lastPrompt != nil, detail.lastSaid != nil,
+               detail.contextTokens != nil { break }
 
             if detail.title == nil, line.contains("\"ai-title\""),
                let obj = json(line), let t = obj["aiTitle"] as? String, !t.isEmpty {
@@ -52,12 +55,32 @@ final class TranscriptReader {
                let obj = json(line), let p = obj["lastPrompt"] as? String, !p.isEmpty {
                 detail.lastPrompt = p
             }
-            if detail.lastSaid == nil, line.contains("\"role\":\"assistant\""),
-               let text = assistantText(line) {
-                detail.lastSaid = text
+            if line.contains("\"role\":\"assistant\"") {
+                if detail.lastSaid == nil, let text = assistantText(line) {
+                    detail.lastSaid = text
+                }
+                if detail.contextTokens == nil, line.contains("\"usage\""),
+                   let usage = usageInfo(line) {
+                    detail.contextTokens = usage.tokens
+                    detail.model = usage.model
+                }
             }
         }
         return detail
+    }
+
+    /// Context size (input + both cache buckets) and model of an assistant turn.
+    private func usageInfo(_ line: Substring) -> (tokens: Int, model: String?)? {
+        guard let obj = json(line),
+              let msg = obj["message"] as? [String: Any],
+              msg["role"] as? String == "assistant",
+              let usage = msg["usage"] as? [String: Any]
+        else { return nil }
+        let tokens = (usage["input_tokens"] as? Int ?? 0)
+            + (usage["cache_read_input_tokens"] as? Int ?? 0)
+            + (usage["cache_creation_input_tokens"] as? Int ?? 0)
+        guard tokens > 0 else { return nil }
+        return (tokens, msg["model"] as? String)
     }
 
     private func json(_ line: Substring) -> [String: Any]? {
