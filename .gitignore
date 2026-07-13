@@ -1,6 +1,7 @@
 # Build products
 /ClaudeWatcher.app/
 /ClaudeWatcher
+*.dmg
 .build/
 *.o
 *.swiftmodule
