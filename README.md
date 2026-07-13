@@ -103,7 +103,8 @@ excellent and far more featureful. Claude Watcher trades all that for:
 - [x] Ambient "needs you" pulse (no focus steal)
 - [x] Real-time via FSEvents
 - [x] Context-pressure gauge
-- [ ] Distribution: signed DMG + Homebrew cask
+- [x] Distribution tooling — `release.sh` (DMG) + Homebrew cask ([docs](docs/DISTRIBUTION.md))
+- [ ] Notarized release (needs an Apple Developer cert) + published tap
 - [ ] Git-aware grouping (cluster rows by project)
 - [ ] Optional per-session cost in USD
 
