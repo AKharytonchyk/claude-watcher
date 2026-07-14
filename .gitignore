@@ -14,3 +14,7 @@ DerivedData/
 *.swp
 .idea/
 .vscode/
+
+# Local tooling / editor config (not part of the product)
+.claude/
+.entire/
