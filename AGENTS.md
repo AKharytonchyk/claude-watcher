@@ -33,6 +33,9 @@ open ClaudeWatcher.app                            # launch into the menu bar
 
 | File | Purpose |
 |------|---------|
+| `AgentAdapter.swift` | Adapter protocol + normalized `AgentSession` + `AgentBrand` |
+| `AgentRegistry.swift`| Enabled adapters (`CWATCH_AGENTS`), watch-path + session aggregation |
+| `ClaudeAdapter.swift`| Claude Code source, behind the adapter protocol |
 | `Session.swift`      | Read `~/.claude/sessions/*.json`, liveness (`kill`), git branch |
 | `Status.swift`       | State enum, counts, menu-bar rendering, context-window inference |
 | `Transcript.swift`   | Last intent / said / token usage from the session transcript |

@@ -38,13 +38,13 @@ final class PRChecker {
         return (false, nil)
     }
 
-    /// Refresh any stale/missing entries for the given sessions in the background.
-    func refresh(_ sessions: [Session]) {
+    /// Refresh any stale/missing entries for the given repos in the background.
+    func refresh(_ repos: [(dir: String, branch: String?)]) {
         guard !Self.offline, let gh = Self.gh else { return }
         var seenDirs = Set<String>()
-        for session in sessions {
-            guard let branch = session.gitBranch else { continue }
-            let dir = session.cwd
+        for repo in repos {
+            guard let branch = repo.branch else { continue }
+            let dir = repo.dir
             guard seenDirs.insert(dir).inserted else { continue }
 
             lock.lock()

@@ -76,10 +76,10 @@ struct StatusCounts {
     }
 }
 
-func countStates(_ sessions: [Session]) -> StatusCounts {
+func countStates(_ states: [AgentState]) -> StatusCounts {
     var counts = StatusCounts()
-    for session in sessions {
-        switch classify(session) {
+    for state in states {
+        switch state {
         case .waiting: counts.waiting += 1
         case .working: counts.working += 1
         case .idle:    counts.idle += 1

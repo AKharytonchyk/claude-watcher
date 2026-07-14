@@ -46,11 +46,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.tick()
         }
 
-        // Instant updates the moment a session file changes.
-        watcher = FileWatcher(paths: [SessionStore.sessionsDir.path]) { [weak self] in
+        // Instant updates the moment a watched session file changes.
+        watcher = FileWatcher(paths: model.watchPaths) { [weak self] in
             self?.tick()
         }
-        watcher?.start()    }
+        watcher?.start()
+    }
 
     /// Refresh the model, repaint the menu bar icon, and pulse if a new agent
     /// just started needing you.

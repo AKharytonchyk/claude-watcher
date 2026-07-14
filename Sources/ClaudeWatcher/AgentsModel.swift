@@ -28,13 +28,19 @@ final class AgentsModel: ObservableObject {
     @Published private(set) var agents: [AgentVM] = []
     @Published private(set) var counts = StatusCounts()
 
-    private let store = SessionStore()
-    private let transcripts = TranscriptReader()
+    private let registry = AgentRegistry.enabled()
     let prChecker = PRChecker()
 
+    /// Directories the file listener should watch (union across adapters).
+    var watchPaths: [String] { registry.allWatchPaths() }
+
     func refresh() {
-        let sessions = store.loadLive()
-        prChecker.refresh(sessions)                         // warm PR cache
+        let sessions = registry.liveSessions()
+
+        // git branch per session (agent-agnostic), computed once.
+        let branches = Dictionary(sessions.map { ($0.id, ClaudeWatcher_gitBranch(at: $0.cwd)) },
+                                  uniquingKeysWith: { a, _ in a })
+        prChecker.refresh(sessions.map { (dir: $0.cwd, branch: branches[$0.id] ?? nil) })
         let hosts = HostDetector.detect(pids: sessions.map(\.pid))
 
         // Per-project aggregates so groups (same cwd) stay adjacent, ordered by
@@ -43,9 +49,8 @@ final class AgentsModel: ObservableObject {
         var groupLatest: [String: Date] = [:]
         var groupCount: [String: Int] = [:]
         for s in sessions {
-            let r = classify(s).rawValue
-            groupRank[s.cwd] = min(groupRank[s.cwd] ?? .max, r)
-            groupLatest[s.cwd] = max(groupLatest[s.cwd] ?? .distantPast, s.statusDate ?? .distantPast)
+            groupRank[s.cwd] = min(groupRank[s.cwd] ?? .max, s.state.rawValue)
+            groupLatest[s.cwd] = max(groupLatest[s.cwd] ?? .distantPast, s.stateSince ?? .distantPast)
             groupCount[s.cwd, default: 0] += 1
         }
 
@@ -57,28 +62,25 @@ final class AgentsModel: ObservableObject {
                 if la != lb { return la > lb }
                 return a.cwd < b.cwd
             }
-            let ra = classify(a).rawValue, rb = classify(b).rawValue
-            if ra != rb { return ra < rb }
-            return (a.statusDate ?? .distantPast) < (b.statusDate ?? .distantPast) // longest-in-state on top
+            if a.state.rawValue != b.state.rawValue { return a.state.rawValue < b.state.rawValue }
+            return (a.stateSince ?? .distantPast) < (b.stateSince ?? .distantPast) // longest-in-state on top
         }
 
-        counts = countStates(sessions)
+        counts = countStates(sessions.map(\.state))
         var seenCwd = Set<String>()
         agents = ordered.map { session in
-            let state = classify(session)
-            let branch = session.gitBranch
+            let branch = branches[session.id] ?? nil
             let (fetched, pr) = prChecker.status(dir: session.cwd, branch: branch)
-            let detail = transcripts.detail(for: session)
             let host = hosts[session.pid] ?? HostInfo(kind: .unknown, appPath: nil)
 
             let stateText: String
-            switch state {
-            case .waiting: stateText = "needs you — \(waitingReason(session.waitingFor))"
+            switch session.state {
+            case .waiting: stateText = "needs you — \(session.waitingReason ?? "awaiting your input")"
             case .working: stateText = "working"
             case .idle:    stateText = "idle"
             }
 
-            let ctxTokens = detail.contextTokens
+            let ctxTokens = session.contextTokens
             let window = ctxTokens.map { contextWindow(observedTokens: $0) }
             let ctxPct: Double? = (ctxTokens != nil && window != nil)
                 ? Double(ctxTokens!) / Double(window!) : nil
@@ -88,12 +90,12 @@ final class AgentsModel: ObservableObject {
                 ? session.projectName : nil
 
             return AgentVM(
-                id: session.sessionId,
-                name: session.displayName,
-                state: state,
+                id: session.id,
+                name: session.name,
+                state: session.state,
                 stateText: stateText,
-                timeText: elapsedShort(since: session.statusDate),
-                intent: detail.lastPrompt.map { oneLine($0, max: 140) },
+                timeText: elapsedShort(since: session.stateSince),
+                intent: session.lastIntent.map { oneLine($0, max: 140) },
                 branch: branch,
                 pr: pr,
                 prPending: branch != nil && !fetched,
