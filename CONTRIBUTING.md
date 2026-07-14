@@ -3,6 +3,11 @@
 Thanks for taking a look! This is a small, focused project — contributions that
 keep it lean and Claude-Code-focused are very welcome.
 
+Governance lives in three places: **[AGENTS.md](AGENTS.md)** (how to work here —
+canonical for AI agents and humans), **[CONSTITUTION.md](CONSTITUTION.md)** (the
+non-negotiable principles), and **[`specs/`](specs/)** (designs for larger
+features). Read AGENTS.md first.
+
 ## Getting set up
 
 Requires the Xcode Command Line Tools (`xcode-select --install`); no full Xcode.
