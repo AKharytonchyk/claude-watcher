@@ -21,6 +21,9 @@ struct AgentVM: Identifiable {
     let hostKind: TerminalHost
     let hostAppPath: String? // .app to activate on click (non-iTerm hosts)
     let groupCaption: String? // dim project label — only on the first of a ≥2 group
+    let providerID: String
+    let providerName: String
+    let providerSymbol: String
 }
 
 /// Observable snapshot of the running agents, refreshed on a timer / FS event.
@@ -107,7 +110,10 @@ final class AgentsModel: ObservableObject {
                 contextPct: ctxPct,
                 hostKind: host.kind,
                 hostAppPath: host.appPath,
-                groupCaption: caption
+                groupCaption: caption,
+                providerID: session.providerID,
+                providerName: session.providerName,
+                providerSymbol: session.providerSymbol
             )
         }
     }

@@ -1,9 +1,10 @@
 import Foundation
 
-/// Identity/branding for an agent type (badge lands in a later phase).
+/// Identity/branding for an agent type.
 struct AgentBrand {
     let id: String
     let displayName: String
+    let symbol: String   // monochrome SF Symbol for the provider badge
 }
 
 /// One running agent session, normalized so the model/UI never see an agent's
@@ -11,6 +12,8 @@ struct AgentBrand {
 /// differs per agent — Claude reads a `status` field; others must infer it).
 struct AgentSession {
     let providerID: String
+    let providerName: String
+    let providerSymbol: String
     let id: String
     let name: String
     let pid: Int

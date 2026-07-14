@@ -1,6 +1,6 @@
 # 0001 — Agent adapter layer (multi-agent support)
 
-- **Status:** Phase 1 done (Claude-only refactor, no behavior change); Phases 2–5 pending
+- **Status:** Phases 1–2 done; Phases 3–5 pending
 - **Owner:** —
 - **Gate:** Phase 3 spike must prove a Codex "needs-you" signal is derivable
   before the Codex adapter is built. Multi-agent conflicts with Constitution §3,
@@ -62,7 +62,9 @@ protocol AgentAdapter {
 1. ✅ Refactor behind the abstraction, **Claude-only**; verify identical behavior.
    (`AgentAdapter`/`AgentSession`/`AgentBrand`, `AgentRegistry`, `ClaudeAdapter`;
    `AgentsModel` and the `FileWatcher` now go through the registry.)
-2. Provider badge in the UI (even with one provider).
+2. ✅ Provider badge groundwork — `AgentBrand.symbol` carried through to
+   `AgentVM`; a quiet monochrome provider glyph renders on the row, shown only
+   when >1 distinct provider is present (invisible while Claude-only).
 3. **Spike** the Codex source — replay a real `~/.codex/sessions/…` file; confirm
    live-session + needs-you are derivable. Decision gate.
 4. `CodexAdapter` + `WaitingCue.swift`; enable via `CWATCH_AGENTS=claude,codex`.

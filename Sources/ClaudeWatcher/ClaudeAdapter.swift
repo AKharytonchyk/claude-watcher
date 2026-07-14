@@ -2,7 +2,7 @@ import Foundation
 
 /// Adapter for Claude Code sessions under ~/.claude.
 final class ClaudeAdapter: AgentAdapter {
-    let brand = AgentBrand(id: "claude", displayName: "Claude Code")
+    let brand = AgentBrand(id: "claude", displayName: "Claude Code", symbol: "sparkle")
 
     private let store = SessionStore()
     private let transcripts = TranscriptReader()
@@ -19,6 +19,8 @@ final class ClaudeAdapter: AgentAdapter {
             let detail = transcripts.detail(for: session)
             return AgentSession(
                 providerID: brand.id,
+                providerName: brand.displayName,
+                providerSymbol: brand.symbol,
                 id: session.sessionId,
                 name: session.displayName,
                 pid: session.pid,

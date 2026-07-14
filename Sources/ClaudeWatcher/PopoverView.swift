@@ -66,6 +66,12 @@ struct PopoverView: View {
         return model.agents.filter { $0.state == filter }
     }
 
+    /// Only surface the provider glyph when more than one agent type is present
+    /// — otherwise it's redundant noise on every row.
+    private var showProvider: Bool {
+        Set(model.agents.map(\.providerID)).count > 1
+    }
+
     // MARK: Content
 
     @ViewBuilder private var content: some View {
@@ -93,7 +99,8 @@ struct PopoverView: View {
                                 .padding(.horizontal, 10)
                                 .padding(.top, 4)
                         }
-                        AgentRowView(agent: agent, onOpen: onOpen, onOpenPR: onOpenPR)
+                        AgentRowView(agent: agent, showProvider: showProvider,
+                                     onOpen: onOpen, onOpenPR: onOpenPR)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,6 +136,7 @@ struct PopoverView: View {
 /// Tapping the row jumps to iTerm; tapping the PR pill opens the PR.
 struct AgentRowView: View {
     let agent: AgentVM
+    var showProvider: Bool = false
     var onOpen: (AgentVM) -> Void
     var onOpenPR: (String) -> Void
     @State private var hovering = false
@@ -143,6 +151,12 @@ struct AgentRowView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
+                        if showProvider {
+                            Image(systemName: agent.providerSymbol)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                                .help("Agent: \(agent.providerName)")
+                        }
                         Text(agent.name)
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.primary)
