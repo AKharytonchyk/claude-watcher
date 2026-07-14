@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "telemetry": false,
+  "redaction": {
+    "pii": {
+      "enabled": true,
+      "email": true,
+      "phone": true,
+      "address": true
+    }
+  },
+  "strategy_options": {
+    "summarize": {
+      "enabled": true
+    }
+  }
+}

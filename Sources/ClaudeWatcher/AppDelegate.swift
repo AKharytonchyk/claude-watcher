@@ -29,7 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.animates = true
         let hosting = NSHostingController(rootView: PopoverView(
             model: model,
-            onOpen: { [weak self] agent in self?.openInITerm(agent) },
+            onOpen: { [weak self] agent in self?.focusSession(agent) },
             onOpenPR: { [weak self] url in self?.openPR(url) },
             onQuit: { NSApp.terminate(nil) }
         ))
@@ -50,8 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         watcher = FileWatcher(paths: [SessionStore.sessionsDir.path]) { [weak self] in
             self?.tick()
         }
-        watcher?.start()
-    }
+        watcher?.start()    }
 
     /// Refresh the model, repaint the menu bar icon, and pulse if a new agent
     /// just started needing you.
@@ -111,12 +110,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Actions
 
-    private func openInITerm(_ agent: AgentVM) {
+    private func focusSession(_ agent: AgentVM) {
         popover.performClose(nil)
-        if let tty = TerminalFocus.tty(forPID: agent.pid), TerminalFocus.focusITerm(tty: tty) {
+        // iTerm → precise tab focus.
+        if agent.hostKind == .iterm,
+           let tty = TerminalFocus.tty(forPID: agent.pid),
+           TerminalFocus.focusITerm(tty: tty) {
             return
         }
-        NSWorkspace.shared.open(URL(fileURLWithPath: agent.cwd)) // fallback
+        // Other hosts (VS Code, Terminal, …) → bring the owning app forward.
+        if let appPath = agent.hostAppPath {
+            NSWorkspace.shared.open(URL(fileURLWithPath: appPath))
+            return
+        }
+        // Last resort → reveal the project folder.
+        NSWorkspace.shared.open(URL(fileURLWithPath: agent.cwd))
     }
 
     private func openPR(_ urlString: String) {

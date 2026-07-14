@@ -18,9 +18,12 @@ struct AgentVM: Identifiable {
     let contextTokens: Int?  // most recent turn's context size
     let contextWindow: Int?  // inferred window
     let contextPct: Double?  // contextTokens / window (0...1)
+    let hostKind: TerminalHost
+    let hostAppPath: String? // .app to activate on click (non-iTerm hosts)
+    let groupCaption: String? // dim project label — only on the first of a ≥2 group
 }
 
-/// Observable snapshot of the running agents, refreshed on a timer.
+/// Observable snapshot of the running agents, refreshed on a timer / FS event.
 final class AgentsModel: ObservableObject {
     @Published private(set) var agents: [AgentVM] = []
     @Published private(set) var counts = StatusCounts()
@@ -31,21 +34,42 @@ final class AgentsModel: ObservableObject {
 
     func refresh() {
         let sessions = store.loadLive()
-        prChecker.refresh(sessions)  // warm PR cache in background
+        prChecker.refresh(sessions)                         // warm PR cache
+        let hosts = HostDetector.detect(pids: sessions.map(\.pid))
 
-        // Urgency first (needs you → working → idle); longest-in-state on top.
+        // Per-project aggregates so groups (same cwd) stay adjacent, ordered by
+        // their most-urgent member, then most-recent activity.
+        var groupRank: [String: Int] = [:]
+        var groupLatest: [String: Date] = [:]
+        var groupCount: [String: Int] = [:]
+        for s in sessions {
+            let r = classify(s).rawValue
+            groupRank[s.cwd] = min(groupRank[s.cwd] ?? .max, r)
+            groupLatest[s.cwd] = max(groupLatest[s.cwd] ?? .distantPast, s.statusDate ?? .distantPast)
+            groupCount[s.cwd, default: 0] += 1
+        }
+
         let ordered = sessions.sorted { a, b in
+            if a.cwd != b.cwd {
+                let ra = groupRank[a.cwd] ?? .max, rb = groupRank[b.cwd] ?? .max
+                if ra != rb { return ra < rb }
+                let la = groupLatest[a.cwd] ?? .distantPast, lb = groupLatest[b.cwd] ?? .distantPast
+                if la != lb { return la > lb }
+                return a.cwd < b.cwd
+            }
             let ra = classify(a).rawValue, rb = classify(b).rawValue
             if ra != rb { return ra < rb }
-            return (a.statusDate ?? .distantPast) < (b.statusDate ?? .distantPast)
+            return (a.statusDate ?? .distantPast) < (b.statusDate ?? .distantPast) // longest-in-state on top
         }
 
         counts = countStates(sessions)
+        var seenCwd = Set<String>()
         agents = ordered.map { session in
             let state = classify(session)
             let branch = session.gitBranch
             let (fetched, pr) = prChecker.status(dir: session.cwd, branch: branch)
             let detail = transcripts.detail(for: session)
+            let host = hosts[session.pid] ?? HostInfo(kind: .unknown, appPath: nil)
 
             let stateText: String
             switch state {
@@ -58,6 +82,10 @@ final class AgentsModel: ObservableObject {
             let window = ctxTokens.map { contextWindow(observedTokens: $0) }
             let ctxPct: Double? = (ctxTokens != nil && window != nil)
                 ? Double(ctxTokens!) / Double(window!) : nil
+
+            let firstOfGroup = seenCwd.insert(session.cwd).inserted
+            let caption = (firstOfGroup && (groupCount[session.cwd] ?? 0) >= 2)
+                ? session.projectName : nil
 
             return AgentVM(
                 id: session.sessionId,
@@ -74,7 +102,10 @@ final class AgentsModel: ObservableObject {
                 pid: session.pid,
                 contextTokens: ctxTokens,
                 contextWindow: window,
-                contextPct: ctxPct
+                contextPct: ctxPct,
+                hostKind: host.kind,
+                hostAppPath: host.appPath,
+                groupCaption: caption
             )
         }
     }

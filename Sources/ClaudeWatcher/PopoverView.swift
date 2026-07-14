@@ -85,6 +85,14 @@ struct PopoverView: View {
             ScrollView {
                 VStack(spacing: 2) {
                     ForEach(agents) { agent in
+                        if let caption = agent.groupCaption {
+                            Text(caption)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 10)
+                                .padding(.top, 4)
+                        }
                         AgentRowView(agent: agent, onOpen: onOpen, onOpenPR: onOpenPR)
                     }
                 }
@@ -103,9 +111,6 @@ struct PopoverView: View {
 
     private var footer: some View {
         HStack {
-            Text("\(model.agents.count) agent\(model.agents.count == 1 ? "" : "s")")
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
             Spacer()
             Button(action: onQuit) {
                 Text("Quit")
@@ -146,16 +151,21 @@ struct AgentRowView: View {
                             .font(.system(size: 11, weight: agent.state == .waiting ? .semibold : .regular))
                             .foregroundStyle(agent.state == .waiting ? AnyShapeStyle(color(.waiting)) : AnyShapeStyle(.secondary))
                             .lineLimit(1)
-                        Spacer(minLength: 0)
+                        Spacer(minLength: 4)
+                        if agent.hostKind != .unknown {
+                            Image(systemName: agent.hostKind.symbol)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                                .help("Running in \(agent.hostKind.label)")
+                        }
                     }
 
                     if let intent = agent.intent {
                         Text(intent)
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                     }
 
                     metaLine
@@ -199,35 +209,32 @@ struct AgentRowView: View {
                     .font(.system(size: 10))
                     .foregroundStyle(.quaternary)
             }
-            Spacer(minLength: 0)
-            // Only surface context pressure once it's worth noticing.
+            // Context pressure — quiet until it's actually close to compacting.
             if let pct = agent.contextPct, pct >= 0.6 {
-                ContextPill(pct: pct, tokens: agent.contextTokens, window: agent.contextWindow)
+                ContextText(pct: pct, tokens: agent.contextTokens, window: agent.contextWindow)
             }
+            Spacer(minLength: 0)
         }
     }
 }
 
-/// Context-pressure pill: yellow → orange → red as the session nears the
-/// auto-compact cliff. Hidden below 60% (nothing to worry about yet).
-struct ContextPill: View {
+/// Context-pressure indicator: stays quiet (grey) until ~85%, then warms to
+/// orange/red near the auto-compact cliff. No filled chip — deference.
+struct ContextText: View {
     let pct: Double
     let tokens: Int?
     let window: Int?
 
-    private var tint: Color {
-        if pct >= 0.9 { return .red }
-        if pct >= 0.8 { return .orange }
-        return .yellow
+    private var tint: AnyShapeStyle {
+        if pct >= 0.95 { return AnyShapeStyle(.red) }
+        if pct >= 0.85 { return AnyShapeStyle(.orange) }
+        return AnyShapeStyle(.secondary)
     }
 
     var body: some View {
         Text("ctx \(Int((pct * 100).rounded()))%")
-            .font(.system(size: 10, weight: .medium))
+            .font(.system(size: 10, weight: pct >= 0.85 ? .semibold : .regular))
             .foregroundStyle(tint)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1.5)
-            .background(tint.opacity(0.15), in: Capsule())
             .help(helpText)
     }
 
@@ -237,29 +244,29 @@ struct ContextPill: View {
     }
 }
 
-/// GitHub-style PR pill: solid green (open) / gray (draft), with the
-/// pull-request glyph. Clickable to open the PR in the browser.
+/// PR indicator: a tinted-outline pill (green = open, grey = draft) with the
+/// pull-request glyph — quiet enough not to compete with the status dot.
+/// Clickable to open the PR in the browser.
 struct PRPill: View {
     let pr: PRInfo
     var action: () -> Void
     @State private var hovering = false
+
+    private var tint: Color { pr.isDraft ? .secondary : .green }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 3) {
                 Image(systemName: "arrow.triangle.pull")
                 Text("#\(pr.number)")
-                if pr.isDraft {
-                    Text("draft").opacity(0.9)
-                }
+                if pr.isDraft { Text("draft").opacity(0.9) }
             }
-            .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(.white)
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(tint)
             .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(pr.isDraft ? Color.gray : Color(red: 0.13, green: 0.55, blue: 0.24),
-                        in: Capsule())
-            .opacity(hovering ? 0.85 : 1)
+            .padding(.vertical, 1.5)
+            .background(tint.opacity(hovering ? 0.12 : 0), in: Capsule())
+            .overlay(Capsule().stroke(tint.opacity(0.5), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
