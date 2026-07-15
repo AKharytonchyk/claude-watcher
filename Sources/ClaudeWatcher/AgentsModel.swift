@@ -18,6 +18,7 @@ struct AgentVM: Identifiable {
     let contextTokens: Int?  // most recent turn's context size
     let contextWindow: Int?  // inferred window
     let contextPct: Double?  // contextTokens / window (0...1)
+    let modelLabel: String?  // humanized model, e.g. "Opus 4.8"
     let hostKind: TerminalHost
     let hostAppPath: String? // .app to activate on click (non-iTerm hosts)
     let groupCaption: String? // dim project label — only on the first of a ≥2 group
@@ -84,7 +85,7 @@ final class AgentsModel: ObservableObject {
             }
 
             let ctxTokens = session.contextTokens
-            let window = ctxTokens.map { contextWindow(observedTokens: $0) }
+            let window = ctxTokens.map { contextWindow(observedTokens: $0, model: session.model) }
             let ctxPct: Double? = (ctxTokens != nil && window != nil)
                 ? Double(ctxTokens!) / Double(window!) : nil
 
@@ -108,6 +109,7 @@ final class AgentsModel: ObservableObject {
                 contextTokens: ctxTokens,
                 contextWindow: window,
                 contextPct: ctxPct,
+                modelLabel: humanModel(session.model),
                 hostKind: host.kind,
                 hostAppPath: host.appPath,
                 groupCaption: caption,

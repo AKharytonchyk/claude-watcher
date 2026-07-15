@@ -72,6 +72,12 @@ struct PopoverView: View {
         Set(model.agents.map(\.providerID)).count > 1
     }
 
+    /// Likewise, only label the model when more than one distinct model is
+    /// running — on a single-model fleet it's noise and steals name width.
+    private var showModel: Bool {
+        Set(model.agents.compactMap(\.modelLabel)).count > 1
+    }
+
     // MARK: Content
 
     @ViewBuilder private var content: some View {
@@ -100,6 +106,7 @@ struct PopoverView: View {
                                 .padding(.top, 4)
                         }
                         AgentRowView(agent: agent, showProvider: showProvider,
+                                     showModel: showModel,
                                      onOpen: onOpen, onOpenPR: onOpenPR)
                     }
                 }
@@ -137,6 +144,7 @@ struct PopoverView: View {
 struct AgentRowView: View {
     let agent: AgentVM
     var showProvider: Bool = false
+    var showModel: Bool = false
     var onOpen: (AgentVM) -> Void
     var onOpenPR: (String) -> Void
     @State private var hovering = false
@@ -161,11 +169,21 @@ struct AgentRowView: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
+                            .truncationMode(.tail)
+                            .layoutPriority(-1)
                         Text(stateLine)
                             .font(.system(size: 11, weight: agent.state == .waiting ? .semibold : .regular))
                             .foregroundStyle(agent.state == .waiting ? AnyShapeStyle(color(.waiting)) : AnyShapeStyle(.secondary))
                             .lineLimit(1)
                         Spacer(minLength: 4)
+                        if showModel, let model = agent.modelLabel {
+                            Text(model)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                                .layoutPriority(1)
+                                .help(agent.contextWindow.map { "\(model) · \(formatTokens($0)) context" } ?? model)
+                        }
                         if agent.hostKind != .unknown {
                             Image(systemName: agent.hostKind.symbol)
                                 .font(.system(size: 10))

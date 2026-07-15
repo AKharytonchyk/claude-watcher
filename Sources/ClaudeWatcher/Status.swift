@@ -141,16 +141,44 @@ func menuBarTitle(_ counts: StatusCounts) -> NSAttributedString {
 // MARK: - Context window
 
 /// Best-effort context window for a session. Claude Code doesn't record the
-/// window, so we infer: 200K by default, 1M once usage exceeds 200K (which is
-/// only possible on a 1M-context session). Override with CWATCH_CONTEXT_WINDOW
-/// (e.g. "1m" or "1000000") if you always run a larger window.
-func contextWindow(observedTokens: Int) -> Int {
+/// window, so we infer it from the model. Opus 4.x offers a 1M window and this
+/// user base runs it, so those sessions are measured against 1M — otherwise a
+/// large session reads as a pinned 100% (an artifact of assuming 200K) while
+/// it's really nowhere near full. Trade-off: a 200K-plan Opus session then
+/// under-reports. Other/unknown models fall back to the observed-size heuristic
+/// (200K until usage proves a larger window). Override either with
+/// CWATCH_CONTEXT_WINDOW (e.g. "1m" or "1000000").
+func contextWindow(observedTokens: Int, model: String?) -> Int {
     if let raw = ProcessInfo.processInfo.environment["CWATCH_CONTEXT_WINDOW"]?
         .trimmingCharacters(in: .whitespaces).lowercased(), !raw.isEmpty {
         if raw.hasSuffix("m"), let n = Double(raw.dropLast()) { return Int(n * 1_000_000) }
         if let n = Int(raw) { return n }
     }
+    if modelSupportsMillionTokenWindow(model) { return 1_000_000 }
     return observedTokens > 200_000 ? 1_000_000 : 200_000
+}
+
+/// Models that offer a 1M-token context window (Opus 4.x today). Matched on the
+/// family so point releases and the `[1m]` variant keep working.
+func modelSupportsMillionTokenWindow(_ model: String?) -> Bool {
+    guard let model = model?.lowercased() else { return false }
+    return model.contains("opus-4")
+}
+
+/// Human-readable model name from an API id: "claude-opus-4-8" -> "Opus 4.8",
+/// "claude-haiku-4-5-20251001" -> "Haiku 4.5", "claude-opus-4-8[1m]" -> "Opus 4.8".
+/// Unknown shapes pass through unchanged so we never hide what's running.
+func humanModel(_ raw: String?) -> String? {
+    guard var s = raw?.lowercased(), !s.isEmpty else { return nil }
+    if let bracket = s.firstIndex(of: "[") { s = String(s[..<bracket]) } // drop "[1m]" etc.
+    s = s.replacingOccurrences(of: "claude-", with: "")
+    let parts = s.split(separator: "-").map(String.init)
+        .filter { !($0.count == 8 && Int($0) != nil) }                   // drop yyyymmdd
+    let words = parts.filter { Int($0) == nil }                          // e.g. ["opus"]
+    let version = parts.filter { Int($0) != nil }.joined(separator: ".") // e.g. "4.8"
+    guard !words.isEmpty else { return raw }                            // all-numeric: unusual
+    let name = words.map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined(separator: " ")
+    return version.isEmpty ? name : "\(name) \(version)"
 }
 
 /// Compact token count: 142000 -> "142K", 1000000 -> "1M".
