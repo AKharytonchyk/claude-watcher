@@ -137,7 +137,7 @@ excellent and far more featureful. Claude Watcher trades all that for:
 - [x] Real-time via FSEvents
 - [x] Context-pressure gauge
 - [x] Distribution tooling — `release.sh` (DMG) + Homebrew cask ([docs](docs/DISTRIBUTION.md))
-- [ ] Notarized release (needs an Apple Developer cert) + published tap
+- [x] Notarized release — Developer ID signed + notarized + stapled, published tap
 - [ ] Git-aware grouping (cluster rows by project)
 - [ ] Optional per-session cost in USD
 

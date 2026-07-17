@@ -16,8 +16,12 @@ daemon, local-first.
 ./build-app.sh                                   # compile + bundle ClaudeWatcher.app
 open ClaudeWatcher.app                            # launch into the menu bar
 ./ClaudeWatcher.app/Contents/MacOS/ClaudeWatcher  # run in foreground to see logs
-./release.sh                                      # build a DMG + print its sha256
+./release.sh                                      # sign + notarize + staple a DMG (needs a Developer ID cert + the cw-notary profile)
 ```
+
+- **One instance at a time.** A launch exits immediately if another instance is
+  already running (single-instance guard in `main.swift`) — quit the menu-bar
+  app before running the binary for logs, or the foreground process just quits.
 
 - **Compiles with `swiftc`, not SwiftPM.** A `Package.swift` manifest fails to
   link with only the Command Line Tools installed — do **not** reintroduce one.
