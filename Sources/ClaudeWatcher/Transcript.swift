@@ -30,9 +30,14 @@ final class TranscriptReader {
     /// Claude Code stores transcripts under a folder that is the cwd with every
     /// non-alphanumeric character replaced by "-".
     private func transcriptURL(for session: Session) -> URL? {
+        // Defense-in-depth: the id becomes a path component, so refuse anything
+        // that isn't a plain id — a crafted id otherwise can't escape
+        // ~/.claude/projects via "..".
+        let id = session.sessionId
+        guard !id.isEmpty, id.allSatisfy({ Self.allowed.contains($0) || $0 == "-" }) else { return nil }
         let encoded = String(session.cwd.map { Self.allowed.contains($0) ? $0 : "-" })
         let url = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claude/projects/\(encoded)/\(session.sessionId).jsonl")
+            .appendingPathComponent(".claude/projects/\(encoded)/\(id).jsonl")
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 

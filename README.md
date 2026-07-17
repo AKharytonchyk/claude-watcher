@@ -78,6 +78,12 @@ drag **ClaudeWatcher.app** to Applications.
 > clears the quarantine flag for you; for the DMG, right-click → Open once, or:
 > `xattr -dr com.apple.quarantine /Applications/ClaudeWatcher.app`
 
+> **On a managed / corporate Mac?** Prefer [**Build from source**](#build-from-source).
+> Until the app is notarized, the cask strips Gatekeeper's quarantine flag for you —
+> harmless given the code, but exactly the kind of step MDM/EDR tooling flags.
+> Building locally never downloads a prebuilt binary or touches quarantine, and
+> gives you the source to review first.
+
 ### Build from source
 
 Requires the Xcode **Command Line Tools** (`xcode-select --install`). No full

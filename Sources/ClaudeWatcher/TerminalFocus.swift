@@ -9,7 +9,12 @@ enum TerminalFocus {
             .trimmingCharacters(in: .whitespacesAndNewlines),
             !raw.isEmpty, raw != "??"
         else { return nil }
-        return raw.hasPrefix("/dev/") ? raw : "/dev/\(raw)"
+        let path = raw.hasPrefix("/dev/") ? raw : "/dev/\(raw)"
+        // A real tty name is alphanumeric (e.g. "ttys001"); reject anything else
+        // so nothing but a plain device path can reach the interpolated osascript.
+        let name = path.dropFirst("/dev/".count)
+        guard !name.isEmpty, name.allSatisfy({ $0.isLetter || $0.isNumber }) else { return nil }
+        return path
     }
 
     /// Focus the iTerm2 window/tab whose session has this tty.
