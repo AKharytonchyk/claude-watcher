@@ -10,9 +10,7 @@
 # Update `version` and `sha256` on each release (release.sh prints the sha256).
 cask "claude-watcher" do
   version "0.3.0"
-  # TODO(release): replace with the sha256 that release.sh prints for
-  # ClaudeWatcher-0.3.0.dmg before merging this PR.
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "c3b03e1b6b93db6fe4a9d1dd3e44dbd03c3b875994e1d4e9aab2143fc60e6aeb"
 
   url "https://github.com/AKharytonchyk/claude-watcher/releases/download/v#{version}/ClaudeWatcher-#{version}.dmg"
   name "Claude Watcher"
