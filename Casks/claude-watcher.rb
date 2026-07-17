@@ -9,8 +9,10 @@
 #
 # Update `version` and `sha256` on each release (release.sh prints the sha256).
 cask "claude-watcher" do
-  version "0.2.0"
-  sha256 "0a2013e37c6ead139f9033d445c93600f46e16fac17af976eb90ba495319e0b8"
+  version "0.3.0"
+  # TODO(release): replace with the sha256 that release.sh prints for
+  # ClaudeWatcher-0.3.0.dmg before merging this PR.
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
 
   url "https://github.com/AKharytonchyk/claude-watcher/releases/download/v#{version}/ClaudeWatcher-#{version}.dmg"
   name "Claude Watcher"
@@ -21,12 +23,8 @@ cask "claude-watcher" do
 
   app "ClaudeWatcher.app"
 
-  # Not yet notarized — clear quarantine so Gatekeeper doesn't block launch.
-  postflight do
-    system_command "/usr/bin/xattr",
-                   args: ["-dr", "com.apple.quarantine", "#{appdir}/ClaudeWatcher.app"],
-                   sudo: false
-  end
+  # The build is signed with a Developer ID cert and notarized, so Gatekeeper
+  # accepts it — no quarantine stripping needed.
 
   zap trash: [
     "~/Library/Application Support/ClaudeWatcher",

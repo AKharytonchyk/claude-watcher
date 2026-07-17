@@ -74,15 +74,9 @@ Or grab `ClaudeWatcher-<version>.dmg` from
 [Releases](https://github.com/AKharytonchyk/claude-watcher/releases/latest) and
 drag **ClaudeWatcher.app** to Applications.
 
-> The build isn't notarized yet, so macOS may warn on first launch. The cask
-> clears the quarantine flag for you; for the DMG, right-click → Open once, or:
-> `xattr -dr com.apple.quarantine /Applications/ClaudeWatcher.app`
-
-> **On a managed / corporate Mac?** Prefer [**Build from source**](#build-from-source).
-> Until the app is notarized, the cask strips Gatekeeper's quarantine flag for you —
-> harmless given the code, but exactly the kind of step MDM/EDR tooling flags.
-> Building locally never downloads a prebuilt binary or touches quarantine, and
-> gives you the source to review first.
+> Signed with a Developer ID certificate and **notarized by Apple**, so it opens
+> without Gatekeeper warnings — no quarantine workaround needed. Prefer to build
+> it yourself? See [**Build from source**](#build-from-source).
 
 ### Build from source
 
