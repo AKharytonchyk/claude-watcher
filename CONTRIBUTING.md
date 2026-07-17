@@ -17,6 +17,9 @@ Requires the Xcode Command Line Tools (`xcode-select --install`); no full Xcode.
 ./ClaudeWatcher.app/Contents/MacOS/ClaudeWatcher # run in foreground to see logs
 ```
 
+Only one instance runs at a time — quit any running menu-bar copy first, or the
+foreground launch exits immediately (single-instance guard).
+
 The whole app is plain Swift compiled with `swiftc` (see `build-app.sh`) — no
 SwiftPM manifest, no Xcode project. Sources live in `Sources/ClaudeWatcher/`:
 
