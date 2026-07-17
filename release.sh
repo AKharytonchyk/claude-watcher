@@ -51,8 +51,11 @@ hdiutil create -volname "Claude Watcher" -srcfolder "$STAGE" \
   -ov -format UDZO "$DMG" >/dev/null
 rm -rf "$STAGE"
 
-# 4) Notarize + staple the DMG too, for the direct-download path.
-echo "▸ notarizing $DMG …"
+# 4) Sign, notarize + staple the DMG too, for the direct-download path.
+#    The DMG must be code-signed before notarizing — notarizing an unsigned DMG
+#    staples a ticket but `spctl` still reports "no usable signature".
+echo "▸ signing + notarizing $DMG …"
+codesign --force --timestamp --sign "$SIGN_ID" "$DMG"
 xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
 xcrun stapler staple "$DMG"
 
